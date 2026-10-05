@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RAAS Interactive Simulator — Version 2</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="app">
+  <header class="header">
+    <div>
+      <div class="eyebrow">Interactive Physiology Simulator</div>
+      <h1>Renin–Angiotensin–Aldosterone System</h1>
+      <p id="subtitle">Start with the stimulus and follow the pathway step by step.</p>
+    </div>
+    <div class="header-actions">
+      <div class="segmented" role="group" aria-label="Which system to show">
+        <button id="viewSystemic" class="seg-btn on" type="button" aria-pressed="true">Systemic RAS</button>
+        <button id="viewIntrarenal" class="seg-btn" type="button" aria-pressed="false">Intrarenal RAS</button>
+      </div>
+      <div class="segmented" role="group" aria-label="Learn or quiz mode">
+        <button id="modeLearn" class="seg-btn on" type="button" aria-pressed="true" title="Steps reveal immediately (for teaching)">Learn mode</button>
+        <button id="modeQuiz" class="seg-btn" type="button" aria-pressed="false" title="Answer a question before each step is revealed">Quiz mode</button>
+      </div>
+      <div class="zoom-controls" aria-label="Simulator zoom controls">
+        <button id="zoomOut" class="zoom-btn" type="button" title="Zoom out by 5 percent">−</button>
+        <input id="zoomSlider" class="zoom-slider" type="range" min="30" max="100" step="5" value="60" aria-label="Simulator zoom percentage">
+        <span id="zoomValue" class="zoom-value">60%</span>
+        <button id="zoomIn" class="zoom-btn" type="button" title="Zoom in by 5 percent">+</button>
+        <button id="zoomFit" class="fit-btn" type="button" title="Fit the diagram to the screen width">Fit</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="controls" id="stepControls" aria-label="Pathway steps">
+    <div class="control-section">
+      <span class="control-label">Pathway</span>
+      <button data-step="1"><span class="step-no">1</span>Stimulus</button>
+      <button data-step="2"><span class="step-no">2</span>Kidney</button>
+      <button data-step="3"><span class="step-no">3</span>Liver</button>
+      <button data-step="4"><span class="step-no">4</span>Lungs</button>
+      <button data-step="5"><span class="step-no">5</span>Adrenal cortex</button>
+    </div>
+    <div class="separator"></div>
+    <div class="control-section hormone-section">
+      <span class="control-label">Effects</span>
+      <button data-step="6" class="hormone-btn"><span class="step-no">6</span>Angiotensin II</button>
+      <button data-step="7" class="hormone-btn"><span class="step-no">7</span>Aldosterone</button>
+      <button data-step="8" class="hormone-btn"><span class="step-no">8</span>Feedback</button>
+    </div>
+  </nav>
+
+  <div class="player" id="player">
+    <button id="btnBack" class="utility secondary" type="button" title="Previous step (← key)">◀ Back</button>
+    <button id="btnPlay" class="utility play" type="button" title="Play the pathway (space bar)">▶ Play</button>
+    <button id="btnNext" class="utility secondary" type="button" title="Next step (→ key)">Next ▶</button>
+    <span class="step-indicator" id="stepIndicator">Step 0 of 8</span>
+    <span class="score" id="scoreBox" hidden>Score: 0 / 0</span>
+    <span class="player-spacer"></span>
+    <button id="btnComplete" class="utility secondary" type="button">Show complete loop</button>
+    <button id="reset" class="utility secondary" type="button">↻ Reset</button>
+  </div>
+
+  <section class="canvas-frame" id="canvasFrame">
+    <div class="stage-column">
+      <div class="stage-scroll" id="stageScroll">
+        <div class="stage-viewport" id="stageViewport">
+          <div class="stage" id="stage">
+
+          <!-- Stimulus (step 1) -->
+          <div class="trigger" id="trigger" role="button" tabindex="0" aria-label="Stimulus: decreased body NaCl lowers ECF volume, which lowers arterial blood pressure and renal perfusion pressure">
+            <div class="trig-row">
+              <span class="trig-chip" id="chipNacl">↓ Body NaCl</span>
+              <span class="trig-link" aria-hidden="true">→</span>
+              <span class="trig-chip" id="chipEcf">↓ ECF volume</span>
+              <span class="trig-link" aria-hidden="true">→</span>
+              <span class="trig-chip" id="chipAbp">↓ Arterial blood pressure</span>
+            </div>
+            <span class="trig-main">→ ↓ Renal perfusion pressure</span>
+            <span class="trig-sub">detected by baroreceptors in the afferent arteriole</span>
+            <span class="badge trig-badge" id="triggerBadge">resulting ↑ renal perfusion pressure</span>
+          </div>
+
+          <!-- Organs -->
+          <article class="organ-card liver-card" id="liverCard" data-organ="liver" tabindex="0">
+            <div class="organ-icon liver-icon">
+              <img src="assets/liver.png" alt="Liver" class="organ-photo liver-photo">
+            </div>
+            <strong>Liver</strong>
+          </article>
+
+          <article class="organ-card kidney-card" id="kidneyCard" data-organ="kidney" tabindex="0">
+            <div class="organ-icon kidney-icon">
+              <img src="assets/kidney.png" alt="Kidney" class="organ-photo kidney-photo">
+            </div>
+            <strong>Kidney</strong>
+          </article>
+
+          <article class="organ-card lungs-card" id="lungsCard" data-organ="lungs" tabindex="0">
+            <div class="organ-icon lungs-icon">
+              <img src="assets/lungs.png" alt="Lungs" class="organ-photo lungs-photo">
+            </div>
+            <strong>Lungs</strong>
+          </article>
+
+          <article class="organ-card adrenal-card" id="adrenalCard" data-organ="adrenal" tabindex="0">
+            <div class="organ-icon adrenal-icon">
+              <img src="assets/adrenal.png" alt="Adrenal cortex" class="organ-photo adrenal-photo">
+            </div>
+            <strong>Adrenal cortex</strong>
+          </article>
+
+          <!-- Enzymes -->
+          <div class="process-box renin-box" id="reninBox" role="button" tabindex="0" title="Renin: where it is made and what triggers its release">
+            Renin <span class="badge renin-badge" id="reninBadge"></span>
+          </div>
+          <div class="process-box ace-box" id="aceBox">
+            <b>ACE</b>
+            <small>Angiotensin-converting enzyme</small>
+          </div>
+
+          <!-- Circulation -->
+          <div class="circulation-tag">Circulation</div>
+          <div class="vessel">
+            <div class="molecule anggen" id="angGen">Angiotensinogen</div>
+            <div class="molecule angi" id="angI">Angiotensin I</div>
+            <div class="molecule angii" id="angII">Angiotensin II</div>
+            <div class="molecule aldo" id="aldo">Aldosterone</div>
+          </div>
+
+          <!-- Step 6: Angiotensin II effects -->
+          <section class="angii-effects" id="angIIEffects">
+            <article class="effect fx-card fx-1" id="vasoCard">
+              <h3>Vascular</h3>
+              <p>Potent vasoconstriction</p>
+              <p>↑ vascular resistance → ↑ systemic BP</p>
+            </article>
+
+            <article class="effect fx-card fx-2" id="glomCard">
+              <h3>Glomerulus</h3>
+              <p>Efferent arteriole constricts more than afferent</p>
+              <p>→ GFR maintained</p>
+              <p>↓ RBF, ↓ K<sub>f</sub></p>
+            </article>
+
+            <article class="effect fx-card fx-3 tubule-effect" id="tubuleCard" role="button" tabindex="0">
+              <h3>Tubular</h3>
+              <p>↑ Na⁺ uptake in several renal tubules</p>
+              <span class="card-action">Tap to see which</span>
+            </article>
+
+            <article class="effect fx-card fx-4" id="vasopressinCard">
+              <h3>Hormonal</h3>
+              <p>↑ Aldosterone (adrenal cortex)</p>
+              <p>↑ Vasopressin (posterior pituitary)</p>
+            </article>
+
+            <article class="effect fx-card fx-5" id="thirstCard">
+              <h3>Thirst</h3>
+              <p>↑ Thirst (brain)</p>
+              <p>→ ↑ water intake</p>
+            </article>
+
+            <div class="correction-box correction-angii" id="correctionAngII">
+              ↑ Salt and water retention, ↑ water intake, ↑ intravascular volume, ↑ vascular resistance → ↑ systemic BP and renal perfusion pressure
+            </div>
+          </section>
+
+          <!-- Step 7: Aldosterone effects -->
+          <section class="aldo-effects" id="aldoEffects">
+            <article class="aldo-effect-box" id="aldoEffectBox">
+              <p><b>Aldosterone</b> (adrenal cortex, zona glomerulosa): ↑ Na⁺ reabsorption and ↑ K⁺ secretion in the late distal tubule and collecting duct. Cl⁻ and water follow Na⁺.</p>
+              <p><b>Vasopressin</b> (posterior pituitary), by contrast: ↑ water reabsorption in the collecting duct.</p>
+            </article>
+            <div class="correction-box correction-aldo" id="correctionAldo">
+              Thus angiotensin II ↑ salt and water retention and intravascular volume → ↑ systemic BP and renal perfusion pressure
+            </div>
+          </section>
+
+          <!-- Step 8: Negative feedback -->
+          <section class="feedback-layer">
+            <div class="outcome-box" id="outcomeBox">
+              <b>Thus angiotensin II increases</b>
+              salt and water retention, intravascular volume and vascular resistance → ↑ systemic blood pressure and renal perfusion pressure
+            </div>
+            <div class="outcome-box input-box" id="inputBox">
+              <b>Suppressing inputs</b>
+              <span id="inputBoxText"></span>
+            </div>
+            <div class="loop-note long-note" id="longLoopNote">
+              <b>Feedback 1</b>
+              The resulting ↑ ECF volume and ↑ renal perfusion pressure suppress renin release
+            </div>
+            <div class="loop-note short-note" id="shortLoopNote">
+              <b>Feedback 2</b>
+              Elevated plasma angiotensin II (red arrow) suppresses renin release via AT1 receptors
+            </div>
+            <div class="range-box" id="rangeBox">
+              Negative feedback that helps to maintain renal perfusion and GFR within the physiological range
+            </div>
+          </section>
+
+          <!-- Arrows -->
+          <svg class="arrow-layer" viewBox="0 0 1600 1250" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <marker id="smallHead" viewBox="0 0 8 8" refX="7" refY="4"
+                      markerWidth="5.5" markerHeight="5.5" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#111111"/>
+              </marker>
+              <marker id="barHead" viewBox="0 0 4 12" refX="2" refY="6"
+                      markerWidth="2" markerHeight="5" orient="auto">
+                <rect x="0" y="0" width="4" height="12" fill="#b42318"/>
+              </marker>
+            </defs>
+
+            <!-- Core pathway -->
+            <line id="aTriggerKidney" class="arrow core-arrow" x1="560" y1="166" x2="560" y2="236" marker-end="url(#smallHead)"/>
+            <text id="plusKidney" class="plus" x="516" y="214">+</text>
+            <line id="aLiver" class="arrow core-arrow" x1="230" y1="374" x2="230" y2="636" marker-end="url(#smallHead)"/>
+            <line id="aKidneyRenin" class="arrow core-arrow" x1="560" y1="374" x2="560" y2="442" marker-end="url(#smallHead)"/>
+            <line id="aReninConversion" class="arrow core-arrow" x1="540" y1="518" x2="540" y2="670" marker-end="url(#smallHead)"/>
+            <line id="conversion1" class="arrow conversion-arrow" x1="404" y1="676" x2="614" y2="676" marker-end="url(#smallHead)"/>
+            <line id="aLungsAce" class="arrow core-arrow" x1="1000" y1="374" x2="1000" y2="442" marker-end="url(#smallHead)"/>
+            <line id="aAceConversion" class="arrow core-arrow" x1="950" y1="548" x2="950" y2="670" marker-end="url(#smallHead)"/>
+            <line id="conversion2" class="arrow conversion-arrow" x1="864" y1="676" x2="1019" y2="676" marker-end="url(#smallHead)"/>
+            <line id="aAngIIAdrenal" class="arrow action-arrow" x1="1262" y1="638" x2="1370" y2="394" marker-end="url(#smallHead)"/>
+            <text id="plusAdrenal" class="plus" x="1334" y="540">+</text>
+            <line id="aAdrenalAldo" class="arrow core-arrow" x1="1440" y1="392" x2="1440" y2="636" marker-end="url(#smallHead)"/>
+
+            <!-- Step 6: angiotensin II downstream (one branch line to five cards) -->
+            <path id="aAngIITrunk" class="arrow action-arrow" d="M 1150 714 L 1150 772 M 168 772 L 1432 772"/>
+            <text id="plusTrunk" class="plus" x="1164" y="756">+</text>
+            <line id="aDrop1" class="arrow action-arrow" x1="168" y1="772" x2="168" y2="826" marker-end="url(#smallHead)"/>
+            <line id="aDrop2" class="arrow action-arrow" x1="484" y1="772" x2="484" y2="826" marker-end="url(#smallHead)"/>
+            <line id="aDrop3" class="arrow action-arrow" x1="800" y1="772" x2="800" y2="826" marker-end="url(#smallHead)"/>
+            <line id="aDrop4" class="arrow action-arrow" x1="1116" y1="772" x2="1116" y2="826" marker-end="url(#smallHead)"/>
+            <line id="aDrop5" class="arrow action-arrow" x1="1432" y1="772" x2="1432" y2="826" marker-end="url(#smallHead)"/>
+            <line id="aCorr1" class="arrow outcome-arrow" x1="168" y1="1062" x2="168" y2="1126" marker-end="url(#smallHead)"/>
+            <line id="aCorr2" class="arrow outcome-arrow" x1="484" y1="1062" x2="484" y2="1126" marker-end="url(#smallHead)"/>
+            <line id="aCorr3" class="arrow outcome-arrow" x1="800" y1="1062" x2="800" y2="1126" marker-end="url(#smallHead)"/>
+            <line id="aCorr4" class="arrow outcome-arrow" x1="1116" y1="1062" x2="1116" y2="1126" marker-end="url(#smallHead)"/>
+            <line id="aCorr5" class="arrow outcome-arrow" x1="1432" y1="1062" x2="1432" y2="1126" marker-end="url(#smallHead)"/>
+
+            <!-- Step 7: aldosterone downstream -->
+            <line id="aAldoEffect" class="arrow action-arrow" x1="1440" y1="716" x2="1300" y2="796" marker-end="url(#smallHead)"/>
+            <line id="aAldoCorrect" class="arrow outcome-arrow" x1="1110" y1="1004" x2="1110" y2="1068" marker-end="url(#smallHead)"/>
+
+            <!-- Step 8: negative feedback -->
+            <line id="aFbAngII" class="arrow core-arrow" x1="1150" y1="716" x2="1150" y2="786" marker-end="url(#smallHead)"/>
+            <line id="aFbAldo" class="arrow core-arrow" x1="1440" y1="716" x2="1326" y2="850" marker-end="url(#smallHead)"/>
+            <path id="aLongLoop" class="arrow inhibit-arrow" d="M 556 870 L 480 870 L 480 524" marker-end="url(#barHead)"/>
+            <text id="minusLong" class="plus minus" x="494" y="820">−</text>
+            <path id="aShortLoop" class="arrow inhibit-arrow" d="M 1215 636 L 1215 408 L 720 408 L 720 481 L 668 481" marker-end="url(#barHead)"/>
+            <text id="minusShort" class="plus minus" x="1228" y="560">−</text>
+            <line id="aRange" class="arrow core-arrow" x1="940" y1="958" x2="940" y2="1026" marker-end="url(#smallHead)"/>
+          </svg>
+
+          <!-- Intrarenal RAS view -->
+          <section class="intrarenal-layer" id="intrarenalLayer" aria-label="Intrarenal renin-angiotensin system">
+            <div class="ir-systemic" id="irSystemic" role="button" tabindex="0">
+              <b>Systemic RAS</b>
+              <span>liver angiotensinogen, lung ACE</span>
+            </div>
+            <div class="ir-kidney">
+              <div class="ir-title">Kidney: local (intrarenal) RAS</div>
+            </div>
+            <div class="ir-box ir-agt" id="irAgt" role="button" tabindex="0"><b>Angiotensinogen</b><small>produced locally</small></div>
+            <div class="ir-enzyme ir-pro" id="irPro" role="button" tabindex="0"><b>Prorenin</b><small>can be activated locally to convert angiotensinogen to angiotensin I</small></div>
+            <div class="ir-box ir-ai" id="irAI" role="button" tabindex="0"><b>Angiotensin I</b></div>
+            <div class="ir-others-label">Also components of the intrarenal RAS</div>
+            <div class="ir-enzyme ir-renin" id="irRenin" role="button" tabindex="0"><b>Renin</b><small>produced locally</small></div>
+            <div class="ir-enzyme ir-ace" id="irAce" role="button" tabindex="0"><b>ACE</b><small>located primarily in the interstitial capillary endothelium and proximal tubule</small></div>
+            <div class="ir-targets" id="irTargets" role="button" tabindex="0">
+              <b>The local RAS regulates</b>
+              intrarenal hemodynamics, glomerular filtration and glomerular permeability, in both physiologic and pathologic conditions
+            </div>
+            <div class="ir-caption" id="irCaption"></div>
+            <svg class="ir-arrows" viewBox="0 0 1600 1250" preserveAspectRatio="none" aria-hidden="true">
+              <line class="ir-arrow" x1="454" y1="590" x2="692" y2="590" marker-end="url(#smallHead)"/>
+              <line class="ir-arrow" x1="575" y1="458" x2="575" y2="580" marker-end="url(#smallHead)"/>
+              <path id="irLink" class="ir-link" d="M 300 136 L 300 206" marker-end="url(#smallHead)"/>
+            </svg>
+          </section>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Predict-before-reveal overlay (Quiz mode) -->
+      <div class="quiz-card" id="quizCard" role="dialog" aria-modal="false" aria-labelledby="quizQuestion" hidden>
+        <div class="quiz-top">
+          <span id="quizTag">Predict before you see step 2</span>
+          <button id="quizSkip" class="link-btn" type="button">Skip question</button>
+        </div>
+        <h2 id="quizQuestion">Question</h2>
+        <div class="quiz-options" id="quizOptions"></div>
+        <div class="quiz-feedback" id="quizFeedback" aria-live="polite"></div>
+        <button id="quizReveal" class="utility play" type="button" hidden>Show step</button>
+      </div>
+
+      <div class="status" id="status" aria-live="polite">Select <b>1 Stimulus</b> or press <b>▶ Play</b> to begin.</div>
+    </div>
+
+    <!-- Side panel -->
+    <aside class="side-panel" id="sidePanel">
+      <div class="tabs" role="tablist" aria-label="Activities" id="tabs">
+        <button role="tab" class="tab" data-tab="label" aria-selected="false">Label it</button>
+        <button role="tab" class="tab on" data-tab="changes" aria-selected="true">Changes</button>
+        <button role="tab" class="tab" data-tab="inputs" aria-selected="false">Renin inputs</button>
+      </div>
+
+      <!-- Changes dashboard -->
+      <div class="tab-panel" data-panel="changes" role="tabpanel">
+        <h3 class="panel-title" id="dashTitle">What changes</h3>
+        <p class="panel-hint" id="dashHint">Arrows show the direction of the most recent change, not an amount.</p>
+        <div class="dash" id="dash"></div>
+        <p class="change-note" id="changeNote"></p>
+      </div>
+
+      <!-- Renin inputs -->
+      <div class="tab-panel" data-panel="inputs" role="tabpanel" hidden>
+        <h3 class="panel-title">What controls renin release?</h3>
+        <p class="panel-hint">Change an input and see how renin release responds.</p>
+        <div class="inputs" id="inputs"></div>
+        <div class="presets">
+          <button class="chip-btn" type="button" data-preset="hypo">Stimulus (↓ NaCl, ↓ ECF, ↓ BP)</button>
+          <button class="chip-btn" type="button" data-preset="restored">After negative feedback</button>
+          <button class="chip-btn" type="button" data-preset="clear">All normal</button>
+        </div>
+        <div class="renin-result" id="reninResult"></div>
+      </div>
+
+      <!-- Label it -->
+      <div class="tab-panel" data-panel="label" role="tabpanel" hidden>
+        <h3 class="panel-title">Systemic RAS: where does each come from?</h3>
+        <p class="panel-hint">Drag each label onto its main source organ in the systemic system. You can also tap a label, then tap the organ.</p>
+        <div class="label-tray" id="labelTray"></div>
+        <p class="label-feedback" id="labelFeedback" aria-live="polite"></p>
+        <button class="utility secondary" id="labelRestart" type="button">Start again</button>
+      </div>
+
+
+      <!-- Intrarenal comparison (shown in intrarenal view) -->
+      <div class="tab-panel" data-panel="intrarenal" role="tabpanel" hidden>
+        <h3 class="panel-title">Systemic vs intrarenal RAS</h3>
+        <div class="compare">
+          <div class="cmp-item">
+            <h5>Angiotensinogen</h5>
+            <p><span class="cmp-tag">Systemic</span>Produced primarily by the liver</p>
+            <p><span class="cmp-tag ir">Intrarenal</span>Produced locally in the kidney</p>
+          </div>
+          <div class="cmp-item">
+            <h5>Renin</h5>
+            <p><span class="cmp-tag">Systemic</span>Juxtaglomerular (granular) cells in the afferent arteriole wall</p>
+            <p><span class="cmp-tag ir">Intrarenal</span>Produced locally; prorenin can also be activated locally</p>
+          </div>
+          <div class="cmp-item">
+            <h5>ACE</h5>
+            <p><span class="cmp-tag">Systemic</span>Mainly the vascular endothelium of the lung</p>
+            <p><span class="cmp-tag ir">Intrarenal</span>Mainly the interstitial capillary endothelium and proximal tubule</p>
+          </div>
+          <div class="cmp-item">
+            <h5>Regulates</h5>
+            <p><span class="cmp-tag">Systemic</span>GFR and renal blood flow</p>
+            <p><span class="cmp-tag ir">Intrarenal</span>Intrarenal hemodynamics, glomerular filtration and glomerular permeability</p>
+          </div>
+        </div>
+        <h4 class="panel-sub">How it relates to the systemic system</h4>
+        <div class="relation" id="relation">
+          <button class="chip-btn on" type="button" data-rel="concert">In concert</button>
+          <button class="chip-btn" type="button" data-rel="independent">Independently</button>
+          <button class="chip-btn" type="button" data-rel="inappropriate">Activated inappropriately</button>
+        </div>
+        <button class="utility play" id="irQuizBtn" type="button">Check yourself (3 questions)</button>
+      </div>
+    </aside>
+  </section>
+
+  <aside class="reading" aria-label="Recommended reading">
+    <p><span aria-hidden="true">📖</span> <b>Recommended Reading:</b> Cunningham, J.G. &amp; Klein, B.G. (2007). <i>Textbook of Veterinary Physiology</i> (4th ed.). Saunders Elsevier, Philadelphia.</p>
+    <p>Students are encouraged to read Chapter 41 — Glomerular Filtration alongside this learning resource.</p>
+  </aside>
+  <div class="credit-line">Created by Dr. Khalid Abdul Majeed, Department of Physiology, UVAS</div>
+</main>
+
+<!-- Detail pop-ups -->
+<dialog class="detail" id="reninDialog" aria-labelledby="reninDialogTitle">
+  <div class="detail-head">
+    <h2 id="reninDialogTitle">Renin: where it is made and what triggers its release</h2>
+    <button class="close-btn" type="button" data-close aria-label="Close">✕</button>
+  </div>
+  <div class="concept">
+    <div class="c-box c-struct"><b>Afferent arteriole</b></div>
+    <div class="c-cols">
+      <div class="c-col">
+        <div class="c-label">Where it is made</div>
+        <div class="c-box"><b>Juxtaglomerular (granular) cells</b><span>in its wall; also described as granular extraglomerular mesangial cells</span></div>
+        <div class="c-arrow"><span class="c-line" aria-hidden="true"></span><span>produce (primarily)</span></div>
+        <div class="c-box c-renin"><b>Renin</b></div>
+        <p class="c-sentence">Renin is a hormone produced primarily by cells located in the wall of the afferent arteriole, the granular extraglomerular mesangial cells, which are specialized juxtaglomerular cells.</p>
+      </div>
+      <div class="c-col">
+        <div class="c-label">What triggers its release</div>
+        <div class="c-box"><b>Baroreceptors</b><span>in the afferent arteriole, detect ↓ renal perfusion pressure</span></div>
+        <div class="c-arrow"><span class="c-line" aria-hidden="true"></span><span>the decrease stimulates (+)</span></div>
+        <div class="c-box c-renin"><b>Renin release</b></div>
+        <p class="c-sentence">A decrease in renal perfusion pressure, most often caused by systemic hypotension, is detected by baroreceptors in the afferent arteriole and stimulates renin release.</p>
+      </div>
+    </div>
+    <div class="c-second">
+      <div class="c-label">A second sensor</div>
+      <div class="c-row">
+        <div class="c-box"><b>Macula densa</b><span>detects ↓ NaCl delivery to the distal tubule</span></div>
+        <div class="c-harrow" aria-hidden="true"><span class="c-hline"></span></div>
+        <div class="c-box c-renin"><b>Renin release</b></div>
+      </div>
+      <p class="c-note">This is a separate mechanism from the baroreceptors: it responds to the NaCl reaching the distal tubule, not to pressure.</p>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="detail" id="tubuleDialog" aria-labelledby="tubuleDialogTitle">
+  <div class="detail-head">
+    <h2 id="tubuleDialogTitle">Where angiotensin II increases Na⁺ uptake</h2>
+    <button class="close-btn" type="button" data-close aria-label="Close">✕</button>
+  </div>
+  <p class="quote">Angiotensin II activates sodium uptake from the tubule fluid into the blood in several renal tubules, including:</p>
+  <p class="panel-hint">Try to name them before you reveal each one.</p>
+  <ul class="tubule-list" id="tubuleList">
+    <li hidden>Proximal tubule</li>
+    <li hidden>Thick ascending limb</li>
+    <li hidden>Distal convoluted tubule</li>
+    <li hidden>Collecting duct</li>
+  </ul>
+  <div class="detail-actions">
+    <button class="utility play" id="tubuleNext" type="button">Reveal next</button>
+    <button class="utility secondary" id="tubuleAll" type="button">Reveal all</button>
+    <button class="utility secondary" id="tubuleHide" type="button">Hide all</button>
+  </div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
